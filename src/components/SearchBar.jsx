@@ -1,6 +1,6 @@
-import React from "react";
+import React, { forwardRef } from "react";
 
-const SearchBar = ({ search, onSearchChange }) => {
+const SearchBar = forwardRef(({ search, onSearchChange }, ref) => {
   return (
     <div className="relative flex-grow mr-4">
       <label htmlFor="search-quotes" className="sr-only">
@@ -14,9 +14,10 @@ const SearchBar = ({ search, onSearchChange }) => {
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         aria-label="Search quotes by text"
+        ref={ref}
       />
     </div>
   );
-};
+});
 
 export default SearchBar;

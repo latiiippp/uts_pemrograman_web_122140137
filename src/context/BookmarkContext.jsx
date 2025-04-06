@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useCallback } from "react";
+import { useLocalStorage } from "../hooks/useHooks";
 
 // Create the context
 const BookmarkContext = createContext();
 
-// Create a named function for the custom hook (important for Vite's Fast Refresh)
+// Create the custom hook for using the context
 function useBookmarksData() {
   const context = useContext(BookmarkContext);
   if (!context) {
@@ -14,28 +15,23 @@ function useBookmarksData() {
 
 // Create the provider component as a named function
 function BookmarkProvider({ children }) {
-  const [bookmarkedQuotes, setBookmarkedQuotes] = useState([]);
+  // Use our custom useLocalStorage hook instead of useState + useEffect
+  const [bookmarkedQuotes, setBookmarkedQuotes] = useLocalStorage(
+    "bookmarkedQuotes",
+    []
+  );
 
-  // Load bookmarks from localStorage on initial render
-  useEffect(() => {
-    const savedBookmarks = JSON.parse(
-      localStorage.getItem("bookmarkedQuotes") || "[]"
-    );
-    setBookmarkedQuotes(savedBookmarks);
-  }, []);
-
-  // Function to toggle bookmark status
-  function toggleBookmark(quoteId) {
-    setBookmarkedQuotes((prevBookmarks) => {
-      const newBookmarks = prevBookmarks.includes(quoteId)
-        ? prevBookmarks.filter((id) => id !== quoteId)
-        : [...prevBookmarks, quoteId];
-
-      // Save to localStorage
-      localStorage.setItem("bookmarkedQuotes", JSON.stringify(newBookmarks));
-      return newBookmarks;
-    });
-  }
+  // Function to toggle bookmark status with useCallback
+  const toggleBookmark = useCallback(
+    (quoteId) => {
+      setBookmarkedQuotes((prevBookmarks) => {
+        return prevBookmarks.includes(quoteId)
+          ? prevBookmarks.filter((id) => id !== quoteId)
+          : [...prevBookmarks, quoteId];
+      });
+    },
+    [setBookmarkedQuotes]
+  );
 
   // Value to be provided by the context
   const value = {

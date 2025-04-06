@@ -1,12 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { Link } from "react-router-dom";
 import SearchBar from "./SearchBar";
 import FilterDropdown from "./FilterDropdown";
 import { useBookmarks } from "../context/BookmarkContext";
 import ErrorMessage from "./ErrorHandling";
 import Pagination from "./Pagination";
+import {
+  useDebounce,
+  useDocumentTitle,
+  useScrollToTop,
+} from "../hooks/useHooks";
 
 const QuoteList = () => {
+  // Document title hook
+  useDocumentTitle("Quote Explorer - Home");
+
+  // State with useState hook
   const [quotes, setQuotes] = useState([]);
   const [filteredQuotes, setFilteredQuotes] = useState([]);
   const [search, setSearch] = useState("");
@@ -14,27 +29,29 @@ const QuoteList = () => {
   const [authors, setAuthors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
+
+  // useRef to focus search input on component mount
+  const searchInputRef = useRef(null);
+
+  // useDebounce custom hook for search to prevent excessive filtering
+  const debouncedSearch = useDebounce(search, 300);
 
   // Use the bookmark context
   const { bookmarkedQuotes, toggleBookmark } = useBookmarks();
 
-  const fetchQuotes = () => {
+  // useCallback to memoize function references
+  const fetchQuotes = useCallback(() => {
     setIsLoading(true);
     setError(null);
 
     fetch("https://dummyjson.com/quotes")
       .then((response) => {
         if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("not-found");
-          } else if (response.status >= 500) {
-            throw new Error("server");
-          } else {
-            throw new Error("unknown");
-          }
+          if (response.status === 404) throw new Error("not-found");
+          if (response.status >= 500) throw new Error("server");
+          throw new Error("unknown");
         }
         return response.json();
       })
@@ -58,45 +75,72 @@ const QuoteList = () => {
           setError({ type: "generic", message: "Failed to load quotes" });
         }
       });
-  };
-
-  useEffect(() => {
-    fetchQuotes();
   }, []);
 
+  // useCallback for page change handler
+  const handlePageChange = useCallback((pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // useCallback for bookmark toggle with dependency on the toggleBookmark function
+  const handleToggleBookmark = useCallback(
+    (id) => {
+      toggleBookmark(id);
+    },
+    [toggleBookmark]
+  );
+
+  // First useEffect for initial data fetch
   useEffect(() => {
+    fetchQuotes();
+
+    // Focus the search input when component mounts
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [fetchQuotes]);
+
+  // Second useEffect for filtering quotes
+  useEffect(() => {
+    // Only filter when the debounced search changes
     let updatedQuotes = quotes;
 
     if (selectedAuthor) {
       updatedQuotes = updatedQuotes.filter((q) => q.author === selectedAuthor);
     }
 
-    if (search) {
+    if (debouncedSearch) {
       updatedQuotes = updatedQuotes.filter((q) =>
-        q.quote.toLowerCase().includes(search.toLowerCase())
+        q.quote.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
 
     setFilteredQuotes(updatedQuotes);
     setCurrentPage(1); // Reset to first page when filter changes
-  }, [search, selectedAuthor, quotes]);
+  }, [debouncedSearch, selectedAuthor, quotes]);
 
-  // Calculate pagination data
-  const indexOfLastQuote = currentPage * itemsPerPage;
-  const indexOfFirstQuote = indexOfLastQuote - itemsPerPage;
-  const currentQuotes = filteredQuotes.slice(
-    indexOfFirstQuote,
-    indexOfLastQuote
-  );
-  const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
+  // Use useMemo to calculate pagination data to prevent recalculation on every render
+  const paginationData = useMemo(() => {
+    const indexOfLastQuote = currentPage * itemsPerPage;
+    const indexOfFirstQuote = indexOfLastQuote - itemsPerPage;
+    const currentQuotes = filteredQuotes.slice(
+      indexOfFirstQuote,
+      indexOfLastQuote
+    );
+    const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
 
-  // Handle page change
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    return {
+      currentQuotes,
+      totalPages,
+      showPagination: filteredQuotes.length > itemsPerPage,
+    };
+  }, [filteredQuotes, currentPage, itemsPerPage]);
 
-  // Loading skeleton
+  // Use custom scroll hook to scroll to top when page changes
+  useScrollToTop(currentPage);
+
+  // Loading skeleton component
   const LoadingSkeleton = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(itemsPerPage)].map((_, index) => (
@@ -104,16 +148,11 @@ const QuoteList = () => {
           key={index}
           className="bg-white p-6 rounded-lg shadow-lg relative animate-pulse"
         >
-          {/* Quote text lines */}
           <div className="h-4 bg-gray-200 rounded-md w-full mb-2"></div>
           <div className="h-4 bg-gray-200 rounded-md w-11/12 mb-2"></div>
           <div className="h-4 bg-gray-200 rounded-md w-full mb-2"></div>
           <div className="h-4 bg-gray-200 rounded-md w-4/5 mb-2"></div>
-
-          {/* Author line */}
           <div className="h-4 bg-gray-200 rounded-md w-1/3 absolute bottom-2 right-2"></div>
-
-          {/* Bookmark icon */}
           <div className="h-5 w-5 bg-gray-200 rounded-full absolute top-4 right-4"></div>
         </div>
       ))}
@@ -131,11 +170,18 @@ const QuoteList = () => {
           aria-label="View your bookmarked quotes"
         >
           <i className="fas fa-bookmark"></i> My Bookmarks
+          {bookmarkedQuotes.length > 0 && (
+            <span className="ml-1">({bookmarkedQuotes.length})</span>
+          )}
         </Link>
       </header>
 
       <div className="flex items-center mb-6">
-        <SearchBar search={search} onSearchChange={setSearch} />
+        <SearchBar
+          search={search}
+          onSearchChange={setSearch}
+          ref={searchInputRef}
+        />
         <FilterDropdown
           authors={authors}
           selectedAuthor={selectedAuthor}
@@ -173,7 +219,7 @@ const QuoteList = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentQuotes.map((quote) => (
+            {paginationData.currentQuotes.map((quote) => (
               <div
                 key={quote.id}
                 className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 relative"
@@ -190,7 +236,7 @@ const QuoteList = () => {
                 </p>
                 <button
                   className="absolute top-4 right-4 text-gray-500 hover:text-purple-500 focus:outline-none"
-                  onClick={() => toggleBookmark(quote.id)}
+                  onClick={() => handleToggleBookmark(quote.id)}
                   aria-label={
                     bookmarkedQuotes.includes(quote.id)
                       ? "Remove from bookmarks"
@@ -209,11 +255,13 @@ const QuoteList = () => {
             ))}
           </div>
 
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+          {paginationData.showPagination && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={paginationData.totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
 
           <div className="flex justify-end mt-4">
             <label
@@ -226,7 +274,7 @@ const QuoteList = () => {
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1); // Reset to first page
+                  setCurrentPage(1);
                 }}
                 className="ml-2 border border-gray-300 rounded p-1 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 aria-label="Select number of quotes per page"
