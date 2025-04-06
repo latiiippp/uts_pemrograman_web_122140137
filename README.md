@@ -1,3 +1,19 @@
+# UTS PEMROGRAMAN WEB RB IF ITERA
+
+## Nama: Ikhsannudin Lathief
+## NIM: 122140137
+## Kelas: RB
+
+## Web Quote Explorer
+
+
+
+
+
+
+
+
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
