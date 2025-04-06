@@ -88,7 +88,7 @@ const QuoteList = () => {
           >
             <Link
               to={`/quote/${quote.id}`}
-              className="text-lg text-gray-700 hover:text-blue-500"
+              className="text-lg text-gray-700 hover:text-blue-500 duration-400"
             >
               {quote.quote}
             </Link>{" "}
@@ -97,7 +97,7 @@ const QuoteList = () => {
               - {quote.author}
             </p>
             <button
-              className="absolute top-4 right-4 text-gray-500 hover:text-red-500 focus:outline-none"
+              className="absolute top-4 right-4 text-gray-500 hover:text-purple-500 focus:outline-none"
               onClick={() => toggleBookmark(quote.id)}
             >
               <i

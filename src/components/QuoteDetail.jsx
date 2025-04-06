@@ -108,7 +108,7 @@ const QuoteDetail = () => {
 
         {/* Positioned back button that partially extends below the card */}
         <button
-          className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 border-4 border-gray-100"
+          className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 border-4 border-gray-100 hover:border-purple-500 hover:transition-colors hover:duration-400"
           onClick={() => navigate("/")}
           aria-label="Back to quotes"
         >
