@@ -1,19 +1,18 @@
-// src/components/BookmarkList.jsx
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaTrash } from "react-icons/fa";
+import { useBookmarks } from "../context/BookmarkContext";
 
 const BookmarkList = () => {
-  const [bookmarkedQuotes, setBookmarkedQuotes] = useState([]);
+  const [bookmarkedQuotesData, setBookmarkedQuotesData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Get bookmarked IDs from localStorage
-    const bookmarkedIds = JSON.parse(
-      localStorage.getItem("bookmarkedQuotes") || "[]"
-    );
+  // Use the bookmark context
+  const { bookmarkedQuotes, toggleBookmark } = useBookmarks();
 
-    if (bookmarkedIds.length === 0) {
+  useEffect(() => {
+    if (bookmarkedQuotes.length === 0) {
+      setBookmarkedQuotesData([]);
       setIsLoading(false);
       return;
     }
@@ -22,29 +21,23 @@ const BookmarkList = () => {
     fetch("https://dummyjson.com/quotes")
       .then((response) => response.json())
       .then((data) => {
-        // Filter only bookmarked quotes
+        // Filter only bookmarked quotes using the context
         const bookmarked = data.quotes.filter((quote) =>
-          bookmarkedIds.includes(quote.id)
+          bookmarkedQuotes.includes(quote.id)
         );
-        setBookmarkedQuotes(bookmarked);
+        setBookmarkedQuotesData(bookmarked);
         setIsLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching quotes:", error);
         setIsLoading(false);
       });
-  }, []);
+  }, [bookmarkedQuotes]); // React to changes in bookmarkedQuotes from context
 
-  const removeBookmark = (id) => {
-    // Remove from state
-    setBookmarkedQuotes((prev) => prev.filter((quote) => quote.id !== id));
-
-    // Remove from localStorage
-    const bookmarkedIds = JSON.parse(
-      localStorage.getItem("bookmarkedQuotes") || "[]"
-    );
-    const updatedIds = bookmarkedIds.filter((bookmarkId) => bookmarkId !== id);
-    localStorage.setItem("bookmarkedQuotes", JSON.stringify(updatedIds));
+  // Function to handle bookmark removal
+  const handleRemoveBookmark = (id) => {
+    // Make sure we're working with the same type (number)
+    toggleBookmark(Number(id));
   };
 
   if (isLoading)
@@ -61,7 +54,7 @@ const BookmarkList = () => {
         </h1>
       </div>
 
-      {bookmarkedQuotes.length === 0 ? (
+      {bookmarkedQuotesData.length === 0 ? (
         <div className="text-center p-10 bg-gray-100 rounded-lg">
           <p className="text-xl text-gray-600">No bookmarked quotes yet</p>
           <Link
@@ -73,18 +66,24 @@ const BookmarkList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bookmarkedQuotes.map((quote) => (
+          {bookmarkedQuotesData.map((quote) => (
             <div
               key={quote.id}
               className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 relative"
             >
-              <p className="text-lg text-gray-700">{quote.quote}</p>
+              <Link
+                to={`/quote/${quote.id}`}
+                className="block text-lg text-gray-700 hover:text-purple-600"
+              >
+                {quote.quote}
+              </Link>
               <p className="text-gray-500 mt-2">- {quote.author}</p>
               <button
                 className="absolute top-4 right-4 text-red-500 hover:text-red-700 focus:outline-none"
-                onClick={() => removeBookmark(quote.id)}
+                onClick={() => handleRemoveBookmark(quote.id)}
+                aria-label="Remove bookmark"
               >
-                <i className="fas fa-trash"></i>
+                <FaTrash />
               </button>
             </div>
           ))}
