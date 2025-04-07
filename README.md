@@ -5,6 +5,10 @@
 ## Kelas: RB
 
 ## Web Quote Explorer
+Quote Explorer adalah web yang menampilkan quotes dari tokoh-tokoh populer di dunia.
+
+API yang digunakan adalah https://dummyjson.com/
+lebih tepatnya adalah https://dummyjson.com/quotes
 
 
 
